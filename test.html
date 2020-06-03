@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body>
+</body>
+<script>
+    const posts = fetch('https://zolotoy.ru/wp-json/wp/v2/posts?per_page=100&offset=100')
+        .then(data => data.json())
+        .then(posts => {
+            async function getRespostFb(url) {
+                const token = 'EAAiTyOiWQZCsBAJ2MiiCZCqG4lkxMi7awK0YjjdZCMZAUzCCmGyJ8qFsbvXrM8mFh9gfF4go3sTYftOazajbwrruB5zCud6Fe3ofPC3elqxBPKCtrcxcdCyPwCXlar1QhONcZBZBjSbEBs1OInsbpYySsZCiarZBf2ZBmjyez9myL7AZDZD';
+                const fbCount = await fetch(`https://graph.facebook.com/?ids=${url}&fields=engagement&access_token=${token}`)
+                    .then(response => response.json())
+                    .then(data => data[url].engagement.share_count);
+
+                return fbCount;
+            }
+            
+
+            async function getRespostVk(url, index) {
+                const vkCount = await fetch(`https://vk.com/share.php?act=count&index=${0}&url=${url}`)
+                    .then(response => response.text())
+                    .then(data => data.match( /^VK\.Share\.count\(\d, (\d+)\);$/ )[ 1 ] / 1);
+
+                return vkCount;
+
+            }
+
+            async function getRespostOk(url) {
+                const okCount = await fetch(`https://connect.ok.ru/dk?st.cmd=extLike&tp=json&ref=${url}`)
+                    .then(response => response.json())
+                    .then(data => data.count);
+
+                return okCount;
+            }
+            
+            const countReposts = posts.map(async ({link, title}, index) => {
+                const vkCount = await getRespostVk(link, index);
+                const okCount = await getRespostOk(link);
+                const fbCount = await getRespostFb(link);
+
+                return {
+                    title: title.rendered,
+                    link,
+                    share: {
+                        vk: vkCount,
+                        facebook: fbCount,
+                        ok: okCount
+                    }
+                }
+            });
+
+            Promise.all(countReposts).then(countReposts => {
+                console.log(JSON.stringify( countReposts ));
+            })
+        })
+    
+
+
+    
+</script>
+</html>
